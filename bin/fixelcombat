@@ -1,0 +1,170 @@
+#!/usr/bin/env python
+
+# Copyright (c) 2008-2023 the MRtrix3 contributors.
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Covered Software is provided under this License on an "as is"
+# basis, without warranty of any kind, either expressed, implied, or
+# statutory, including, without limitation, warranties that the
+# Covered Software is free of defects, merchantable, fit for a
+# particular purpose or non-infringing.
+# See the Mozilla Public License v. 2.0 for more details.
+#
+# For more details, see http://www.mrtrix.org/.
+
+# note: deal with these warnings properly when we drop support for Python 2:
+# pylint: disable=unspecified-encoding
+
+def usage(cmdline): #pylint: disable=unused-variable
+  from mrtrix3 import app #pylint: disable=no-name-in-module, import-outside-toplevel
+  cmdline.set_author('Remika Mito (remika.mito@florey.edu.au)')
+  cmdline.set_synopsis('Run ComBat data harmonization on fixel data')
+  cmdline.add_description('This command takes in fixel data and performs ComBat data harmonization '
+                          'using neuroCombat. Output fixel data are harmonized for scanner/site.')
+  cmdline.add_argument('in_fixel_directory', help='The fixel directory containing input fixel '
+                       'data to harmonise.')
+  cmdline.add_argument('files', help='a text file listing subject identifiers (one per line). '
+                        'This should correspond with the filenames in the fixel directory '
+                        '(including the file extension), and be listed in the same order '
+                        'as the rows of the design matrix.')
+  cmdline.add_argument('design', help='the design matrix. (same as input to fixelcfestats)')
+  cmdline.add_argument('batch', help='a text file corresponding to the batch (scanner variable). '
+                        'Rows should be listed in the same order as the subjects and design '
+                        'matrices.')
+  cmdline.add_argument('output_dir', help='The output directory for ComBat harmonized fixel data.')
+  cmdline.add_argument('-age_index', type=int, help='index corresponding to age of subjects '
+                        'as listed in design matrix, as covariate to preserve during ComBat. '
+                        'Zero-indexing should be used.')
+  cmdline.add_argument('-icv_index', type=int, help='index corresponding to ICV of subjects '
+                        'as listed in design matrix, as covariate to preserve during ComBat. '
+                        'Zero-indexing should be used.')
+  cmdline.add_citation('Mito, R.; Pardoe, H.; Smith, R.; Tournier, J-D.; Vaughan, D..; Pedersen, '
+                       'M.; Jackson, G.; ComBat scanner harmonisation for fixel-based analysis. '
+                       'in Proc. Intl. Soc. Mag. Reson. Med. Toronto, Canada. 2023, 3243.', 
+                       is_external=False)
+  cmdline.add_citation('Fortin, J-P.; Parker, D.; Tunc, B.; Watanabe, T.; Elliott, M.A.; Ruparel, '
+                       'K.; Roalf, D.R.; Satterthwaite, T.D.; Gur, R.C.; Gur, R.E.; Schultz, R.T.; '
+                       'Verma, R.; Shinohara, R.T. Harmonization of multi-site diffusion tensor '
+                       'imaging data. NeuroImage, 2017, 161, 149-170.', is_external=True)
+
+def execute(): #pylint: disable=unused-variable
+  from mrtrix3 import app, image, path, run #pylint: disable=no-name-in-module, import-outside-toplevel
+  import os
+  import numpy as np
+  import nibabel as nib
+  from neuroCombat import neuroCombat
+  import pandas as pd
+
+  #app.check_output_path(app.ARGS.output_dir)
+
+  # Define batch, age, and ICV
+  input_dir = str(app.ARGS.in_fixel_directory)
+  batch = str(app.ARGS.batch)
+  design = str(app.ARGS.design)
+  batch_scanner = np.loadtxt(batch)
+  design_txt = np.loadtxt(design)
+  files = str(app.ARGS.files)
+  if app.ARGS.age_index:
+    age = str(app.ARGS.age_index)
+    age_col = design_txt[:,int(age)]
+  if app.ARGS.icv_index:
+    icv = str(app.ARGS.icv_index)
+    icv_col = design_txt[:,int(icv)]
+
+  if app.ARGS.age_index and app.ARGS.icv_index:
+    covars = {'batch': batch_scanner, 'age': age_col, 'ICV': icv_col}
+    covars = pd.DataFrame(covars)
+  elif app.ARGS.age_index and not app.ARGS.icv_index:
+    covars = {'batch': batch_scanner, 'age': age_col}
+    covars = pd.DataFrame(covars)
+  elif app.ARGS.icv_index and not app.ARGS.age_index:
+    covars = {'batch': batch_scanner, 'ICV': icv_col}
+    covars = pd.DataFrame(covars)
+  elif not app.ARGS.age_index and not app.ARGS.icv_index:
+    covars = {'batch': batch_scanner}
+    covars = pd.DataFrame(covars)
+  # print(covars)
+  
+  # Specify variables that are categorial
+  # e.g., categorical_cols = ['gender']
+
+  # Specify name of variable that encodes for scanner/batch covariate
+  batch_col = 'batch'
+
+  # import data to scratch directory
+  app.make_scratch_dir()
+  run.command('mkdir ' + path.to_scratch('raw'))
+  run.command('mkdir ' + path.to_scratch('combat'))
+
+  # Read data to be imported
+  files_list = open(files)
+  nii_list = []
+
+  for row in files_list:
+    name = row.split('\n')
+    ID = name[0]
+    HCname = ID.split('.')[0]
+    mif_name = input_dir + '/' + ID
+    run.command('mrconvert ' + mif_name + ' ' + path.to_scratch('raw/' + HCname + '.nii'))
+    res = (HCname + '.nii')
+    nii_list.append(res)
+
+  print(nii_list)
+  sub_number = len(nii_list)
+
+  # Load MRI data for combat
+  app.console('Reading fixel data for harmonisation')
+  data = []
+
+  for row in nii_list:
+    path_to_img = path.to_scratch('raw/' + row)
+    img = nib.load(path_to_img)
+    MRI_data = img.get_fdata()
+    hdr = img.header
+    MRI_data[np.isinf(MRI_data)] = np.nan
+    mrarray = np.asarray(MRI_data)
+    long = np.row_stack(mrarray) # this turns into array of shape (nfixels, 1)
+
+    data.append(long)
+
+  data = np.hstack(data)
+  # print(data)
+
+  # Run ComBat Harmonization
+  app.console('Performing ComBat data harmonisation')
+  data_combat = neuroCombat(dat=data,
+    covars=covars,
+    batch_col=batch_col)["data"]
+
+  indiv_combat = np.hsplit(data_combat, sub_number)
+
+  # Check output directory
+  if not os.path.exists(app.ARGS.output_dir):
+    os.mkdir(app.ARGS.output_dir)
+
+  # Write ComBat data to images
+  for row2 in nii_list:
+    index = nii_list.index(row2)
+    name = row2.split('.')
+    ID = name[0]
+
+    # Save combat MRI data
+    MRI_data_combat = np.reshape(indiv_combat[index], (indiv_combat[index].size,1,1))
+    path_to_out_img = path.to_scratch('combat/' + row2)
+
+    ### OUTPUT DATA ###
+    img_out = nib.Nifti2Image(MRI_data_combat,None,header=hdr)
+    hdr2 = img_out.header
+    nib.save(img_out, path_to_out_img)
+
+    run.command('mrconvert ' + path_to_out_img + ' ' + path.from_user(app.ARGS.output_dir) + '/' + ID + '.mif')
+
+  run.command('cp ' + input_dir + '/index.mif ' + input_dir + '/directions.mif ' + path.from_user(app.ARGS.output_dir) + '/')
+
+
+# Execute the script
+import mrtrix3 #pylint: disable=wrong-import-position
+mrtrix3.execute() #pylint: disable=no-member
