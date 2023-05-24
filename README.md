@@ -21,10 +21,12 @@ pip install neuroCombat
 ```
 Note that neuroCombat requires `numpy` 1.16.5 and `pandas` 1.0.3. Follow instructions on the main [neuroCombat page](https://github.com/Jfortin1/neuroCombat.git). 
 
-### nibabel
-This command uses `nibabel`. Install by running:
+### Other dependencies
+This command uses `nibabel`, `pandas`, and `numpy`. Install by running:
 ```
 $ pip install nibabel
+$ pip install pandas
+$ pip install numpy
 ```
 
 ## Installation
@@ -32,18 +34,46 @@ $ pip install nibabel
 To install `fixelcombat`, you can clone this repository:
 ```
 $ git clone https://github.com/remikamito/fixel_combat.git
-$ cd fixel_combat/
-$ ./build
 ```
-For the `build` command to work, it needs to invoke the main MRtrix3 `build` script. Please clone this repository in the _**same location**_ as the cloned mrtrix3 repository (i.e., ~/mrtrix3 and ~/fixelcombat should be located in the same parent directory). 
+Please clone this repository in the _**same location**_ as the cloned mrtrix3 repository (i.e., ~/mrtrix3 and ~/fixelcombat should be located in the same parent directory). 
+
+### Add command to path
+Once installed, you will be able to run the `fixelcombat` command using its full path (i.e., `~/fixel_combat/bin/fixelcombat`). However, you may wish to add it to your `PATH`. To do this, run the following (or add line within your `~/.bashrc` or equivalent file). 
+```
+$ export PATH=~/fixel_combat/bin:$PATH
+```
 
 ## Usage
 
+The basic usage for the `fixelcombat` command is:
+```
+fixelcombat [ options ] in_fixel_directory files design batch output_dir
+``` 
+- `in_fixel_directory`: the fixel directory containing input fixel data to harmonise
+- `files`: a text file listing subject identifiers (one per line). This should correspond with the filenames in the fixel directory (including file extension) and be listed in the same order as the rows of the design matrix
+- `design`: the design matrix (same as for `fixelcfestats`)
+- `batch`: a text file corresponding to the batch (scanner variable). Rows should be listed in the same order as the subject and design matrices
+- `output_dir`: the output fixel directory for ComBat harmonised fixel data. 
 
+Options include:
+- `age_index INT`: index corresponding to age column in the design matrix (if age is to be included as a biological covariate to preserve). Note that zero-indexing should be used
+- `icv_index INT`: index corresponding to ICV column in the design matrix (if ICV is to be included as a biological covariate to preserve). Note that zero-indexing should be used
+
+As with other MRtrix3 commands, you can check usage by typing in `fixelcombat` without any arguments. 
+
+### Example usage
+You may wish to perform `fixelcombat` prior to performing [`fixelcfestats`](https://mrtrix.readthedocs.io/en/latest/reference/commands/fixelcfestats.html#fixelcfestats). 
+
+In this case you might run the following:
+```
+fixelcombat fdc_smooth subjects.txt design.txt batch.txt fdc_smooth_combat -age_index 2 -icv_index 3
+```
+In this example, we would be running `fixelcombat` on the `fdc_smooth` data, including age and ICV as biological covariates to preserve (where age is the 3rd column in design matrix, and ICV is 4th column in design matrix).
 
 ## References
 
 When using ComBat for the harmonisation of multi-site or -scanner fixel-based data, please cite the following:
 
 1. JP Fortin, D Parker, B Tunc, T Watanabe, MA Elliott, K Ruparel, DR Roalf, TD Satterthwaite, RC Gur, RE Gur, RT Schultz, R Verma, RT Shinohara. Harmonization Of Multi-Site Diffusion Tensor Imaging Data. NeuroImage, 161, 149-170, 2017. [[Link here](https://www.sciencedirect.com/science/article/abs/pii/S1053811917306948?via%3Dihub#!)].
-2. R Mito, H Pardoe, R Smith,J-D Tournier, D Vaughan, M Pedersen, GD Jackson. ComBat scanner harmonisation for fixel-based analysis. in Proc. Intl. Soc. Mag. Reson. Med. Toronto, Canada. p.3243, 2023 [[Link here](https://submissions.mirasmart.com/ISMRM2023/Itinerary/ConferenceMatrixEventDetail.aspx?ses=D-24)]
+2. R Mito, H Pardoe, R Smith, J-D Tournier, D Vaughan, M Pedersen, GD Jackson. ComBat scanner harmonisation for fixel-based analysis. in Proc. Intl. Soc. Mag. Reson. Med. Toronto, Canada. p.3243, 2023 [[Link here](https://submissions.mirasmart.com/ISMRM2023/Itinerary/ConferenceMatrixEventDetail.aspx?ses=D-24)]
+3. J-D Tournier, R Smith, D Raffelt, R Tabbara, T Dhollander, M Pietsch, D Christiaens, B Jeurissen, C-H Yeh, A Connelly. MRtrix3: A fast, flexible and open software framework for medical image processing and visualisation. NeuroImage, 2019, 202, 116137. [[Link here](https://www.sciencedirect.com/science/article/abs/pii/S1053811919307281)].
