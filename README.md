@@ -70,6 +70,12 @@ fixelcombat fdc_smooth subjects.txt design.txt batch.txt fdc_smooth_combat -age_
 ```
 In this example, we would be running `fixelcombat` on the `fdc_smooth` data, including age and ICV as biological covariates to preserve (where age is the 3rd column in design matrix, and ICV is 4th column in design matrix).
 
+### TBC
+
+To come:
+- Specifying categorical variables for neuroCombat
+- Optional arguments from neuroCombat (`eb`, `parametric`, `mean_only` and `ref_batch`).
+
 ## References
 
 When using ComBat for the harmonisation of multi-site or -scanner fixel-based data, please cite the following:
