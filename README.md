@@ -19,14 +19,12 @@ To run `fixelcombat`, you will need to have a source installation of MRtrix3 ava
 ```
 pip install neuroCombat
 ```
-Note that neuroCombat requires `numpy` 1.16.5 and `pandas` 1.0.3. Follow instructions on the main [neuroCombat page](https://github.com/Jfortin1/neuroCombat.git). 
+Note that neuroCombat requires `numpy` 1.16.5 and `pandas` 1.0.3. More information is on the main [neuroCombat page](https://github.com/Jfortin1/neuroCombat.git). 
 
 ### Other dependencies
-This command uses `nibabel`, `pandas`, and `numpy`. Install by running:
+This command uses `nibabel`. Install by running:
 ```
 $ pip install nibabel
-$ pip install pandas
-$ pip install numpy
 ```
 
 ## Installation
@@ -35,7 +33,19 @@ To install `fixelcombat`, you can clone this repository:
 ```
 $ git clone https://github.com/remikamito/fixel_combat.git
 ```
-Please clone this repository in the _**same location**_ as the cloned mrtrix3 repository (i.e., ~/mrtrix3 and ~/fixelcombat should be located in the same parent directory). 
+
+### Invoking build script
+In order for the command to work, you should link this module to your core MRtrix3 installation. See the [MRtrix3 page on external modules](https://mrtrix.readthedocs.io/en/latest/tips_and_tricks/external_modules.html) for more information. 
+As described, you can either **use a text file** containing the path to the MRtrix3 core build script:
+```
+$ cd ~/fixel_combat
+$ echo ../mrtrix3/build > build
+```
+or **create a symbolic link** to the build script:
+```
+$ cd ~/fixel_combat
+$ ln -s ../mrtrix3/build
+```
 
 ### Add command to path
 Once installed, you will be able to run the `fixelcombat` command using its full path (i.e., `~/fixel_combat/bin/fixelcombat`). However, you may wish to add it to your `PATH`. To do this, run the following (or add line within your `~/.bashrc` or equivalent file). 
