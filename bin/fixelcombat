@@ -41,6 +41,12 @@ def usage(cmdline): #pylint: disable=unused-variable
   cmdline.add_argument('-icv_index', type=int, help='index corresponding to ICV of subjects '
                         'as listed in design matrix, as covariate to preserve during ComBat. '
                         'Zero-indexing should be used.')
+  cmdline.add_argument('-gender_index', type=int, help='index corresponding to gender of subjects '
+                        'as listed in design matrix, as covariate to preserve during ComBat. '
+                        'Zero-indexing should be used.')
+  cmdline.add_argument('-disease_index', type=int, help='index corresponding to disease of subjects '
+                        'as listed in design matrix, as covariate to preserve during ComBat. '
+                        'Zero-indexing should be used.')
   cmdline.add_citation('Mito, R.; Pardoe, H.; Smith, R.; Tournier, J-D.; Vaughan, D..; Pedersen, '
                        'M.; Jackson, G.; ComBat scanner harmonisation for fixel-based analysis. '
                        'in Proc. Intl. Soc. Mag. Reson. Med. Toronto, Canada. 2023, 3243.', 
@@ -60,36 +66,42 @@ def execute(): #pylint: disable=unused-variable
 
   #app.check_output_path(app.ARGS.output_dir)
 
-  # Define batch, age, and ICV
+  # Define batch, age, ICV, gender, and disease
   input_dir = str(app.ARGS.in_fixel_directory)
   batch = str(app.ARGS.batch)
   design = str(app.ARGS.design)
   batch_scanner = np.loadtxt(batch)
   design_txt = np.loadtxt(design)
   files = str(app.ARGS.files)
-  if app.ARGS.age_index:
-    age = str(app.ARGS.age_index)
-    age_col = design_txt[:,int(age)]
-  if app.ARGS.icv_index:
-    icv = str(app.ARGS.icv_index)
-    icv_col = design_txt[:,int(icv)]
+  # Create an empty dictionary to store covariates
+  covars_dict = {'batch': batch_scanner}
 
-  if app.ARGS.age_index and app.ARGS.icv_index:
-    covars = {'batch': batch_scanner, 'age': age_col, 'ICV': icv_col}
-    covars = pd.DataFrame(covars)
-  elif app.ARGS.age_index and not app.ARGS.icv_index:
-    covars = {'batch': batch_scanner, 'age': age_col}
-    covars = pd.DataFrame(covars)
-  elif app.ARGS.icv_index and not app.ARGS.age_index:
-    covars = {'batch': batch_scanner, 'ICV': icv_col}
-    covars = pd.DataFrame(covars)
-  elif not app.ARGS.age_index and not app.ARGS.icv_index:
-    covars = {'batch': batch_scanner}
-    covars = pd.DataFrame(covars)
-  # print(covars)
-  
   # Specify variables that are categorial
-  # e.g., categorical_cols = ['gender']
+  categorical_cols = []
+
+  # Check each argument and add the corresponding column to the dictionary if it exists
+  if app.ARGS.age_index:
+      age_col = design_txt[:, int(app.ARGS.age_index)]
+      covars_dict['age'] = age_col
+  
+  if app.ARGS.icv_index:
+      icv_col = design_txt[:, int(app.ARGS.icv_index)]
+      covars_dict['ICV'] = icv_col
+  
+  if app.ARGS.gender_index:
+      gender_col = design_txt[:, int(app.ARGS.gender_index)]
+      covars_dict['gender'] = gender_col
+      categorical_cols.append('gender')  # Add 'gender' to categorical columns list
+
+  if app.ARGS.disease_index:
+      disease_col = design_txt[:, int(app.ARGS.disease_index)]
+      covars_dict['disease'] = disease_col
+      categorical_cols.append('disease')  # Add 'disease' to categorical columns list
+
+  # Create a DataFrame from the dictionary
+  covars = pd.DataFrame(covars_dict)
+  
+  # print(covars)
 
   # Specify name of variable that encodes for scanner/batch covariate
   batch_col = 'batch'
@@ -135,9 +147,15 @@ def execute(): #pylint: disable=unused-variable
 
   # Run ComBat Harmonization
   app.console('Performing ComBat data harmonisation')
-  data_combat = neuroCombat(dat=data,
-    covars=covars,
-    batch_col=batch_col)["data"]
+  if categorical_cols:
+      data_combat = neuroCombat(dat=data,
+                                covars=covars,
+                                batch_col=batch_col,
+                                categorical_cols=categorical_cols)["data"]
+  else:
+      data_combat = neuroCombat(dat=data,
+                                covars=covars,
+                                batch_col=batch_col)["data"]
 
   indiv_combat = np.hsplit(data_combat, sub_number)
 
