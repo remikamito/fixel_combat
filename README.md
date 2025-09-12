@@ -7,10 +7,10 @@ This implements ComBat harmonisation for fixel format imaging data, based on the
 To run `fixelcombat`, you will need to have a source installation of MRtrix3 available. If you do not already have this installed, navigate to the [main MRtrix3 repo](https://github.com/MRtrix3/mrtrix3), and run the following: 
 
 ```
- $ git clone https://github.com/MRtrix3/mrtrix3.git
- $ cd mrtrix3/
- $ ./configure
- $ ./build
+ git clone https://github.com/MRtrix3/mrtrix3.git
+ cd mrtrix3/
+ ./configure
+ ./build
 ```
 *Note: `fixelcombat` requires MRtrix3 >= v3.0.0.*
 
@@ -24,33 +24,33 @@ Note that neuroCombat requires `numpy` 1.16.5 and `pandas` 1.0.3. More informati
 ### Other dependencies
 This command uses `nibabel`. Install by running:
 ```
-$ pip install nibabel
+pip install nibabel
 ```
 
 ## Installation
 
 To install `fixelcombat`, you can clone this repository:
 ```
-$ git clone https://github.com/remikamito/fixel_combat.git
+git clone https://github.com/remikamito/fixel_combat.git
 ```
 
 ### Invoking build script
 In order for the command to work, you should link this module to your core MRtrix3 installation. See the [MRtrix3 page on external modules](https://mrtrix.readthedocs.io/en/latest/tips_and_tricks/external_modules.html) for more information. 
 As described, you can either **use a text file** containing the path to the MRtrix3 core build script:
 ```
-$ cd ~/fixel_combat
-$ echo ../mrtrix3/build > build
+cd ~/fixel_combat
+echo ../mrtrix3/build > build
 ```
 or **create a symbolic link** to the build script:
 ```
-$ cd ~/fixel_combat
-$ ln -s ../mrtrix3/build
+cd ~/fixel_combat
+ln -s ../mrtrix3/build
 ```
 
 ### Add command to path
 Once installed, you will be able to run the `fixelcombat` command using its full path (i.e., `~/fixel_combat/bin/fixelcombat`). However, you may wish to add it to your `PATH`. To do this, run the following (or add line within your `~/.bashrc` or equivalent file). 
 ```
-$ export PATH=~/fixel_combat/bin:$PATH
+export PATH=~/fixel_combat/bin:$PATH
 ```
 
 ## Usage
